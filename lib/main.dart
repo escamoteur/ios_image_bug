@@ -1,13 +1,15 @@
-import 'package:flutter/cupertino.dart';
-import 'package:flutter/material.dart';
 import 'dart:convert';
-import 'package:http/http.dart' as http;
+
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
+import 'package:http/http.dart' as http;
 
 /// A sample Flutter app to help debug the issue:
 /// "Exception: Image upload failed due to loss of GPU access on iOS Devices on 3.27.1"
 /// Related issue: https://github.com/flutter/flutter/issues/161142#issuecomment-2851617663
 ///
+//// added by @escamoteur not sure why this part of adding the assets is needed
 /// Setup Instructions:
 /// 1. Add `home.png` and `gallery.png` to the `assets/` directory.
 /// 2. Update your `pubspec.yaml` to include:
@@ -26,6 +28,19 @@ import 'package:cached_network_image/cached_network_image.dart';
 /// - A log prints when the app fetches images from the API.
 /// - The images are not fetched again if they have already been fetched, and the state is maintained.
 /// - Unlike in my video, this code uses a 5-column grid to help trigger the potential bug.
+class CustomCacheManager {
+  static const key = 'customCacheKey';
+  static CacheManager instance = CacheManager(
+    Config(
+      key,
+      stalePeriod: const Duration(days: 7),
+      maxNrOfCacheObjects: 1000,
+      repo: JsonCacheInfoRepository(databaseName: key),
+      fileSystem: IOFileSystem(key),
+      fileService: HttpFileService(),
+    ),
+  );
+}
 
 void main() {
   WidgetsFlutterBinding.ensureInitialized();
@@ -170,22 +185,21 @@ class _ImageGridScreenState extends State<ImageGridScreen>
                       Flexible(
                         child: InteractiveViewer(
                           child: CachedNetworkImage(
+                            cacheManager: CustomCacheManager.instance,
                             key: ValueKey(imageUrl),
                             imageUrl: imageUrl,
                             fit: BoxFit.contain,
                             fadeInDuration: Duration.zero,
                             fadeOutDuration: Duration.zero,
-                            placeholder:
-                                (context, url) => const Center(
-                                  child: CircularProgressIndicator(
-                                    valueColor: AlwaysStoppedAnimation<Color>(
-                                      Color(0xFFD6D6D6),
-                                    ),
-                                  ),
+                            placeholder: (context, url) => const Center(
+                              child: CircularProgressIndicator(
+                                valueColor: AlwaysStoppedAnimation<Color>(
+                                  Color(0xFFD6D6D6),
                                 ),
-                            errorWidget:
-                                (context, url, error) =>
-                                    const Icon(Icons.error),
+                              ),
+                            ),
+                            errorWidget: (context, url, error) =>
+                                const Icon(Icons.error),
                           ),
                         ),
                       ),
@@ -240,20 +254,20 @@ class _ImageGridScreenState extends State<ImageGridScreen>
             return GestureDetector(
               onTap: () => _openFullScreen(context, imageUrl),
               child: CachedNetworkImage(
+                cacheManager: CustomCacheManager.instance,
                 key: ValueKey(imageUrl),
                 imageUrl: imageUrl,
                 fit: BoxFit.cover,
                 fadeInDuration: Duration.zero,
                 fadeOutDuration: Duration.zero,
                 memCacheWidth: 300, // Cache images at 300px width
-                placeholder:
-                    (context, url) => const Center(
-                      child: CircularProgressIndicator(
-                        valueColor: AlwaysStoppedAnimation<Color>(
-                          Color(0xFFD6D6D6),
-                        ),
-                      ),
+                placeholder: (context, url) => const Center(
+                  child: CircularProgressIndicator(
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                      Color(0xFFD6D6D6),
                     ),
+                  ),
+                ),
                 errorWidget: (context, url, error) => const Icon(Icons.error),
               ),
             );
